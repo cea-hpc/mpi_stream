@@ -3,8 +3,6 @@
 /* Revision: $Id: stream.c,v 5.8 2007/02/19 23:57:39 mccalpin Exp mccalpin $ */
 /* Revision: MPI Version 2011/06/22                                      */
 /*           Modified by L. Nguyen CS:SI (laurent.nguyen@c-s.fr)         */
-/* Revision: Command line options 2014                                   */
-/*           Modified by L. Nguyen CEA (laurent.nguyen@cea.fr)           */ 
 /* Original code developed by John D. McCalpin                           */
 /* Programmers: John D. McCalpin                                         */
 /*              Joe R. Zagar                                             */
@@ -44,16 +42,15 @@
 /*     program constitutes acceptance of these licensing restrictions.   */
 /*  5. Absolutely no warranty is expressed or implied.                   */
 /*-----------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <getopt.h>
-#include <math.h>
-#include <float.h>
-#include <limits.h>
-#include <sys/time.h>
+# include <stdio.h>
+# include <math.h>
+# include <float.h>
+# include <limits.h>
+# include <sys/time.h>
 #ifdef __MPI__
-#include "mpi.h"
+# include "mpi.h"
+       #include <unistd.h>
+
 #endif
 
 /* INSTRUCTIONS:
@@ -63,6 +60,12 @@
  *          at least 20 clock-ticks.  This will provide rate estimates
  *          that should be good to about 5% precision.
  */
+
+//# define N	2880000000 // 64Go
+//# define N      5760000000 // 128Go
+//# define N 5184000000 // 120Go
+//# define NTIMES	10
+//# define OFFSET	0
 
 /*
  *	3) Compile the code with full optimization.  Many compilers
@@ -94,38 +97,15 @@
 # define MAX(x,y) ((x)>(y)?(x):(y))
 # endif
 
-double** malloc_double_2d(int row, int column)
-{
-  double** array;
-  double* data;
-  int i;
- 
-  if(row <= 0 || column <= 0)
-    {
-      return NULL;
-    }
- 
-  array = (double**) malloc((size_t)(row*column*sizeof(double) + row*sizeof(double*)));
-  if(array == NULL)
-    {
-      return NULL;
-    }
- 
-  for(i=0,data=(double*)(array+row); i<row; i++,data+=column)
-    {
-      array[i] = data;
-    }
- 
-  return array;
-}
- 
-
+// static double	a[N+OFFSET],
+//   b[N+OFFSET],
+//   c[N+OFFSET];
 long N = 100000;
 int NTIMES = 10;
 int OFFSET = 0;
-double*              a;
-double*              b;
-double*              c;
+  double*              a;
+  double*              b;
+  double*              c;
 
 #ifdef __MPI__
 char *myHostName;
@@ -133,7 +113,7 @@ char *hostNames;
 #endif
 
 static double	avgtime[4] = {0}, maxtime[4] = {0},
-	    mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
+  mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
 static char	*label[4] = {"Copy:      ", "Scale:     ",
 			     "Add:       ", "Triad:     "};
@@ -151,17 +131,13 @@ extern void tuned_STREAM_Triad(double scalar);
 #ifdef _OPENMP
 extern int omp_get_num_threads();
 #endif
-
-int main(int argc, char* argv[])
+int
+main(int argc, char* argv[])
 {
   int			quantum, checktick();
-  int			BytesPerWord=sizeof(double);
-  long 	j, k;
-  double		scalar, t;
-  double                **times;
-  int opt = 0;
-  double mem = -1.0;
-  
+  int			BytesPerWord;
+  register long 	j, k;
+  double		scalar, t, times[4][NTIMES];
 #ifdef __MPI__
   double                bw=0.0;
   double *              all_bw;
@@ -171,7 +147,7 @@ int main(int argc, char* argv[])
 
   MPI_Comm comm = MPI_COMM_WORLD;
   int rank, size, len;
- 
+  
 
   MPI_Init(&argc, &argv);
   MPI_Comm_size(comm, &size);
@@ -192,43 +168,16 @@ int main(int argc, char* argv[])
   if(rank == 0) 
     {
 #endif
-      while ((opt = getopt(argc, argv, "hn:m:t:o:")) != -1)
+      if(argc > 1)
 	{
-	  switch (opt)
+	  N = atol(argv[1]);
+	  if(argc > 2)
 	    {
-	    case 'h':
-	      printf("STREAM CCRT MPI/OpenMP version $Revision: 5.8 $\n");
-	      printf("Usage: ./stream.exe [-h] [-n N] [-m mem] [-t ntimes] [-o offset]\n\n");
-	      printf("Options:\n");
-	      printf("   -n N         Size of a vector\n");
-	      printf("   -m mem       Memory (kB) used per process\n");
-	      printf("   -t ntimes    Number of times the computation will run\n");
-	      printf("   -o offset    Offset\n");
-	      printf("   -h           Print this help\n\n");
-	      exit(EXIT_SUCCESS);
-	      break;
-	    case 'n':
-	      N=atol(optarg);
-	      break;
-	    case 'm':
-	      mem=atof(optarg);
-	      break;
-	    case 't':
-	      NTIMES=atoi(optarg);
-	      break;
-	    case 'o':
-	      OFFSET=atoi(optarg);
-	      break;
-	    default:
-	      break;
-	    }
-	  if(mem < 0)
-	    {
-	      mem =  (3.0 * BytesPerWord) * ( (double) N / 1024.0);
-	    }
-	  else
-	    {
-	      N = (long) (1024.0*mem)/(3.0*BytesPerWord);
+	      NTIMES = atoi(argv[2]);
+	      if(argc > 3)
+		{
+		  OFFSET = atoi(argv[3]);
+		}
 	    }
 	}
 #ifdef __MPI__
@@ -238,8 +187,13 @@ int main(int argc, char* argv[])
   MPI_Bcast(&OFFSET, 1, MPI_INT, 0, comm);
 
 #endif
+  bytes[0] = 2 * sizeof(double) * N;
+  bytes[1] = 2 * sizeof(double) * N;
+  bytes[2] = 3 * sizeof(double) * N;
+  bytes[3] = 3 * sizeof(double) * N;
 
   /* --- SETUP --- determine precision and check timing --- */
+  BytesPerWord = sizeof(double);
 #ifdef __MPI__
   if(rank == 0)
     {
@@ -253,8 +207,8 @@ int main(int argc, char* argv[])
       
       printf(HLINE);
       printf("Array size = %ld, Offset = %ld\n" , N, (long) OFFSET);
-      printf("Total memory required = %.2f KB.\n",
-	     (3.0 * BytesPerWord) * ( (double) N / 1024.0));
+      printf("Total memory required = %.1f MB.\n",
+	     (3.0 * BytesPerWord) * ( (double) N / 1048576.0));
       printf("Each test is run %d times, but only\n", NTIMES);
       printf("the *best* time for each is used.\n");
 
@@ -266,7 +220,7 @@ int main(int argc, char* argv[])
 	{
 	  k = (long) omp_get_num_threads();
 #ifdef __MPI__
-	  nthreads=(int) k;
+      nthreads=(int) k;
 #endif
 	  printf ("Number of Threads requested = %ld\n",k);
 	}
@@ -282,21 +236,18 @@ int main(int argc, char* argv[])
     }
 #endif
 
-  bytes[0] = 2 * sizeof(double) * N;
-  bytes[1] = 2 * sizeof(double) * N;
-  bytes[2] = 3 * sizeof(double) * N;
-  bytes[3] = 3 * sizeof(double) * N;
-
-  times = malloc_double_2d(4,NTIMES);
-  for(j=0;j<4;j++)
-    {
-      avgtime[j] = 0;
-      maxtime[j] = 0;
-      mintime[j] = FLT_MAX;
-    }
-
+#ifdef __MPI__
   /* Allocate buffers */
-    
+  long phypz = sysconf(_SC_AVPHYS_PAGES);
+    long psize = sysconf(_SC_PAGE_SIZE);
+if(rank==0)
+    printf("available memory in double : %lf \nmax parameter is : %lf \n percent requested %lf \n", (1.*phypz*psize)/(1.*sizeof(double)),(1.*phypz*psize)/(sizeof(double)*3.25)-OFFSET,(300*(N+OFFSET)*sizeof(double))/(1.*phypz*psize) );
+if(phypz*psize<3.10*(N+OFFSET)*sizeof(double))
+    printf("not enough memory to do the run on %s \n",&hostNames[rank*MPI_MAX_PROCESSOR_NAME]);
+MPI_Barrier(MPI_COMM_WORLD);
+if(phypz*psize<3.10*(N+OFFSET)*sizeof(double))
+    MPI_Abort(MPI_COMM_WORLD,10);
+#endif
   a = (double *) malloc((N+OFFSET)*sizeof(double));
   b = (double *) malloc((N+OFFSET)*sizeof(double));
   c = (double *) malloc((N+OFFSET)*sizeof(double));
@@ -336,8 +287,8 @@ int main(int argc, char* argv[])
 #ifdef __MPI__
 	}
 #endif
-      quantum = 1;
-    }
+    quantum = 1;
+  }
 
   t = mysecond();
 #pragma omp parallel for
@@ -499,9 +450,9 @@ int main(int argc, char* argv[])
 	{
 	  bw_sum += (all_bw[j]-bw_avg)*(all_bw[j]-bw_avg);
 	}
-      if(size<2)
+      if(size < 2)
 	{
-	  bw_stdd=0.0;
+	  bw_stdd = 0.0;
 	}
       else
 	{
@@ -519,7 +470,6 @@ int main(int argc, char* argv[])
   free(a);
   free(b);
   free(c);
-  free(times);
 #ifdef __MPI__
   free(hostNames);
   free(all_bw);
@@ -560,6 +510,8 @@ checktick()
 
   return(minDelta);
 }
+
+
 
 /* A gettimeofday routine to give access to the wall
    clock timer on most UNIX-like systems.  */
