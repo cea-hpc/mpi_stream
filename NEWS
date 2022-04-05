@@ -11,3 +11,11 @@
 * Initial fork from stream-5.8 2007/02/19
 =========================================
 
+   -- Revision: $Id: stream.c,v 5.8 2007/02/19 23:57:39 mccalpin Exp mccalpin $
+   -- Revision: MPI Version 2011/06/22
+   --           Modified by L. Nguyen CS:SI (laurent.nguyen@c-s.fr)
+   -- Revision: Command line options 2014
+   --           Modified by L. Nguyen CEA (laurent.nguyen@cea.fr)
+   --  Original code developed by John D. McCalpin
+   --  Programmers: John D. McCalpin
+                    Joe R. Zagar

@@ -1,4 +1,6 @@
+/*-----------------------------------------------------------------------*/
 /* Copyright 1991-2005: John D. McCalpin                                 */
+/* Copyright 2007-2023: CEA/DAM/DIF                                      */
 /*-----------------------------------------------------------------------*/
 /* License:                                                              */
 /*  1. You are free to use this program and/or to redistribute           */
