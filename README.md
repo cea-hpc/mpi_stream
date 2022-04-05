@@ -30,7 +30,7 @@ To keep a reference code, CEA publishes its modified version on Github in 2022.
 
 Main program:
 
-* C++ compiler
+* C compiler
 * OpenMP
 * MPI
 
