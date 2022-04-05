@@ -1,6 +1,6 @@
-CC = mpicc
-CFLAGS = -O3
-OPT= -D__MPI__ 
+CC = gcc
+CFLAGS = -O3 -fopenmp
+#OPT= -D__MPI__ 
 LD = $(CC)
 LDFLAGS = $(CFLAGS)
 
