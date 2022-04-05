@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
 	  switch (opt)
 	    {
 	    case 'h':
-	      printf("STREAM CCRT MPI/OpenMP version $Revision: 5.8 $\n");
+	      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: 0.2 $\n");
 	      printf("Usage: ./stream.exe [-h] [-n N] [-m mem] [-t ntimes] [-o offset]\n\n");
 	      printf("Options:\n");
 	      printf("   -n N         Size of a vector\n");
@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
     {
 #endif
       printf(HLINE);
-      printf("STREAM CCRT MPI/OpenMP version $Revision: 5.8 $\n");
+      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: 0.2 $\n");
       printf(HLINE);
       
       printf("This system uses %d bytes per DOUBLE PRECISION word.\n",
