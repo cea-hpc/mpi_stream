@@ -2,7 +2,7 @@
 
 This program measures memory transfer rates in MB/s for simple computational kernels coded in C.
 
-## Context
+## Motivations
 
 Since 2007, Stream benchmark is used to test and to check nodes in clusters managed by the CEA/DAM during system updates or system maintenances. The benchmark is useful to detect :
 * Memory module failure
