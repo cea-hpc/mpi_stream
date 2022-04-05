@@ -20,11 +20,11 @@ To keep a reference code, CEA publishes its modified version on Github in 2022.
 
 ## Legacy code
 
-McCalpin, John D., 1995: "Memory Bandwidth and Machine Balance in Current High Performance Computers", IEEE Computer Society Technical Committee on Computer Architecture (TCCA) Newsletter, December 1995.
+* McCalpin, John D., 1995: "Memory Bandwidth and Machine Balance in Current High Performance Computers", IEEE Computer Society Technical Committee on Computer Architecture (TCCA) Newsletter, December 1995.
 
 [Stream benchmark](https://www.cs.virginia.edu/stream/)
 
-[paper](https://www.researchgate.net/publication/213876927_Memory_Bandwidth_and_Machine_Balance_in_Current_High_Performance_Computers)
+[Stream benchmark paper](https://www.researchgate.net/publication/213876927_Memory_Bandwidth_and_Machine_Balance_in_Current_High_Performance_Computers)
 
 ## Prerequisites
 
