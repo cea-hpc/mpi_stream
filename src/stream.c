@@ -1,6 +1,6 @@
 /*-----------------------------------------------------------------------*/
 /* Program: MPI_Stream                                                   */
-/* Revision: 0.2                                                         */
+/* Revision: see README.md                                               */
 /* This program measures memory transfer rates in MB/s for simple        */
 /* computational kernels coded in C.                                     */
 /*-----------------------------------------------------------------------*/
@@ -10,6 +10,7 @@
 /* License: see License.txt or                                           */
 /*          https://github.com/cea-hpc/mpi_stream/blob/main/LICENSE.txt  */
 /*-----------------------------------------------------------------------*/
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,7 @@
 #include <float.h>
 #include <limits.h>
 #include <sys/time.h>
-#ifdef __MPI__
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 
@@ -59,7 +60,7 @@ double*              a;
 double*              b;
 double*              c;
 
-#ifdef __MPI__
+#ifdef HAVE_MPI
 char *myHostName;
 char *hostNames;
 #endif
@@ -94,7 +95,7 @@ int main(int argc, char* argv[])
   int opt = 0;
   double mem = -1.0;
   
-#ifdef __MPI__
+#ifdef HAVE_MPI
   double                bw=0.0;
   double *              all_bw;
   double                bw_max=0.0, bw_min=0.0, bw_avg=0.0, bw_stdd=0.0, bw_sum=0.0;
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
 	  switch (opt)
 	    {
 	    case 'h':
-	      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: 0.2 $\n");
+	      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: %s $\n", PACKAGE_VERSION);
 	      printf("Usage: ./stream.exe [-h] [-n N] [-m mem] [-t ntimes] [-o offset]\n\n");
 	      printf("Options:\n");
 	      printf("   -n N         Size of a vector\n");
@@ -163,7 +164,7 @@ int main(int argc, char* argv[])
 	      N = (long) (1024.0*mem)/(3.0*BytesPerWord);
 	    }
 	}
-#ifdef __MPI__
+#ifdef HAVE_MPI
     }
   MPI_Bcast(&N, 1, MPI_LONG, 0, comm);
   MPI_Bcast(&NTIMES, 1, MPI_INT, 0, comm);
@@ -172,12 +173,12 @@ int main(int argc, char* argv[])
 #endif
 
   /* --- SETUP --- determine precision and check timing --- */
-#ifdef __MPI__
+#ifdef HAVE_MPI
   if(rank == 0)
     {
 #endif
       printf(HLINE);
-      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: 0.2 $\n");
+      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: %s $\n", PACKAGE_VERSION);
       printf(HLINE);
       
       printf("This system uses %d bytes per DOUBLE PRECISION word.\n",
@@ -197,7 +198,7 @@ int main(int argc, char* argv[])
 #pragma omp master
 	{
 	  k = (long) omp_get_num_threads();
-#ifdef __MPI__
+#ifdef HAVE_MPI
 	  nthreads=(int) k;
 #endif
 	  printf ("Number of Threads requested = %ld\n",k);
@@ -206,7 +207,7 @@ int main(int argc, char* argv[])
 #endif
       
       printf(HLINE);
-#ifdef __MPI__
+#ifdef HAVE_MPI
       if(size>1)
 	{
 	  printf("Number of MPI Processes = %d\n", size);
@@ -241,7 +242,7 @@ int main(int argc, char* argv[])
     c[j] = 0.0;
   }
 
-#ifdef __MPI__
+#ifdef HAVE_MPI
   if(rank == 0)    
 #endif
     {
@@ -249,23 +250,23 @@ int main(int argc, char* argv[])
     }
 
   if  ( (quantum = checktick()) >= 1) 
-#ifdef __MPI__
+#ifdef HAVE_MPI
     if(rank == 0)
       {
 #endif
 	printf("Your clock granularity/precision appears to be "
 	       "%d microseconds.\n", quantum);
-#ifdef __MPI__
+#ifdef HAVE_MPI
       }
 #endif
     else {
-#ifdef __MPI__
+#ifdef HAVE_MPI
       if(rank == 0)
 	{
 #endif
 	  printf("Your clock granularity appears to be "
 		 "less than one microsecond.\n");
-#ifdef __MPI__
+#ifdef HAVE_MPI
 	}
 #endif
       quantum = 1;
@@ -277,7 +278,7 @@ int main(int argc, char* argv[])
     a[j] = 2.0E0 * a[j];
   t = 1.0E6 * (mysecond() - t);
   
-#ifdef __MPI__
+#ifdef HAVE_MPI
   if(rank == 0)
     {
 #endif
@@ -293,7 +294,7 @@ int main(int argc, char* argv[])
       printf("For best results, please be sure you know the\n");
       printf("precision of your system timer.\n");
       printf(HLINE);
-#ifdef __MPI__
+#ifdef HAVE_MPI
     }
   MPI_Barrier(comm);
 #endif
@@ -344,7 +345,7 @@ int main(int argc, char* argv[])
       times[3][k] = mysecond() - times[3][k];
     }
 
-#ifdef __MPI__
+#ifdef HAVE_MPI
   MPI_Barrier(comm);
 #endif
 
@@ -360,18 +361,18 @@ int main(int argc, char* argv[])
 	}
     }
 
-#ifdef __MPI__
+#ifdef HAVE_MPI
   if(rank == -1)
     { 
 #endif
       printf("Function      Rate (MB/s)   Avg time     Min time     Max time\n");
-#ifdef __MPI__
+#ifdef HAVE_MPI
     }
 #endif
   
   for (j=0; j<4; j++) {
     avgtime[j] = avgtime[j]/(double)(NTIMES-1);   
-#ifdef __MPI__
+#ifdef HAVE_MPI
     if(rank == -1)
       { 
 #endif
@@ -380,12 +381,12 @@ int main(int argc, char* argv[])
 	       avgtime[j],
 	       mintime[j],
 	       maxtime[j]);
-#ifdef __MPI__
+#ifdef HAVE_MPI
       }
 #endif
   }
 
-#ifdef __MPI__
+#ifdef HAVE_MPI
   bw = 1.0E-06 * bytes[3]/mintime[3];
 
   MPI_Allgather(&bw, 1, MPI_DOUBLE, all_bw, 1, MPI_DOUBLE, comm);
@@ -398,7 +399,7 @@ int main(int argc, char* argv[])
       /* --- Check Results --- */
       checkSTREAMresults();
       printf(HLINE);
-#ifdef __MPI__
+#ifdef HAVE_MPI
     }
   if(rank == 0)
     { 
@@ -452,7 +453,7 @@ int main(int argc, char* argv[])
   free(b);
   free(c);
   free(times);
-#ifdef __MPI__
+#ifdef HAVE_MPI
   free(hostNames);
   free(all_bw);
 
