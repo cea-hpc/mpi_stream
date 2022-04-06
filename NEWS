@@ -1,3 +1,9 @@
+* Current changes
+========================================
+
+   -- Add Autoconf build
+   -- Add CMake build
+
 * Changes in mpi_stream-0.2 - 2014/**/**
 ========================================
 
