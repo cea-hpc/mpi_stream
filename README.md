@@ -34,8 +34,9 @@ Main program:
 * OpenMP
 * MPI
 
-## Getting started
+## Compilation
 
+### Autoconf
 ```
 $ ./autogen.sh
 $ ./configure                                   # Sequential mode
@@ -44,7 +45,24 @@ $ ./configure --with-mpi CC=mpicc               # MPI mode
 $ ./configure --with-openmp --with-mpi CC=mpicc # MPI/OpenMP mode
 $ make
 ```
-
+To pass options to C compiler:
+```
+$ ./configure CFLAGS="-mavx2" LDFLAGS="-mavx2"
+```
+### CMake
+```
+$ mkdir build
+$ cd build
+$ cmake ..                      # Sequential mode
+$ cmake -DOPENMP=ON ..          # OpenMP mode
+$ cmake -DMPI=ON ..             # MPI mode
+$ cmake -DOPENMP=ON -DMPI=ON .. # MPI/OpenMP mode
+$ make VERBOSE=1
+```
+To pass options to C compiler:
+```
+$ cmake -DCMAKE_C_FLAGS="-mavx2" -DCMAKE_EXE_LINKER_FLAGS="-mavx2" ..
+```
 ## Running
 
 ```

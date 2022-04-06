@@ -1,0 +1,2 @@
+#cmakedefine HAVE_MPI
+#define PACKAGE_VERSION @mpi_stream_VERSION@

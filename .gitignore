@@ -27,3 +27,6 @@ libtool
 src/.deps/
 src/Makefile
 stamp-h1
+
+# CMake
+build
