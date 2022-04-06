@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
 	  switch (opt)
 	    {
 	    case 'h':
-	      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: %s $\n", PACKAGE_VERSION);
+	      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: %f $\n", PACKAGE_VERSION);
 	      printf("Usage: ./stream.exe [-h] [-n N] [-m mem] [-t ntimes] [-o offset]\n\n");
 	      printf("Options:\n");
 	      printf("   -n N         Size of a vector\n");
@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
     {
 #endif
       printf(HLINE);
-      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: %s $\n", PACKAGE_VERSION);
+      printf("MPI_STREAM CEA MPI/OpenMP version $Revision: %f $\n", PACKAGE_VERSION);
       printf(HLINE);
       
       printf("This system uses %d bytes per DOUBLE PRECISION word.\n",
