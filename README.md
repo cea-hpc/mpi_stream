@@ -3,20 +3,21 @@
 This program measures memory transfer rates in MB/s for simple computational kernels coded in C.
 
 ## Motivations
+Since 2007, the Stream benchmark is used to test and check nodes on clusters managed by CEA/DAM during system updates or maintenances. The benchmark is useful to detect:
 
-Since 2007, Stream benchmark is used to test and to check nodes in clusters managed by the CEA/DAM during system updates or system maintenances. The benchmark is useful to detect :
 * Memory module failure
 * Lack of memory on nodes
-* Performance problems on memory modules
-* Regression on OS
-* Regression on compilers (OpenMP)
+* Memory module performance issue
+* OS regression
+* Compiler regression (OpenMP)
 
-Over the years, CEA adds features to be more efficient to detect these problems :
-* The MPI version can test all a cluster (more than 8000 nodes) with only a single run.
-* An option can be use to indicate an amount of memory instead to compute an array size.
-* The output was updated to give a list of nodes sorted by their mesured bandwidth.
+Over the years, CEA added some features to be more efficient detecting these problems:
 
-To keep a reference code, CEA publishes its modified version on Github in 2022.
+* The MPI version can test a whole cluster (more than 8000 nodes) with a single run only.
+* An option can be used to define the amount of memory to use instead of a vector size. An array size will therefore be computed to fit this memory requirement.
+* The output was updated to give a list of nodes sorted by their measured bandwidth.
+
+To share these new features with the HPC community, CEA publishes this modified version on Github in 2022.
 
 ## Legacy code
 
