@@ -19,6 +19,7 @@
 #include <float.h>
 #include <limits.h>
 #include <sys/time.h>
+#include <unistd.h>
 #ifdef HAVE_MPI
 #include "mpi.h"
 #endif
@@ -62,8 +63,8 @@ double *c;
 
 #ifdef HAVE_MPI
 char *myHostName;
-char *hostNames;
 #endif
+char *hostNames;
 
 static double avgtime[4] = {0}, maxtime[4] = {0},
 	      mintime[4] = {FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX};
@@ -75,6 +76,43 @@ static double bytes[4];
 
 extern double mysecond();
 extern void checkSTREAMresults();
+void print_STREAM_json(double mem, int size, char *hostname, double *bandwidth)
+{
+  int i = 0;
+#ifdef HAVE_MPI
+  int stream_max_hostname = MPI_MAX_PROCESSOR_NAME;
+#else
+  int stream_max_hostname = HOST_NAME_MAX + 1;
+#endif
+
+  printf(HLINE);
+  printf("Results in JSON: {\"mem_kb\": %lf, \"nhosts\": %d, \"hostnames\": [", mem, size);
+  for(i=0; i<size; i++)
+    {
+      if(i == 0)
+	{
+	  printf("\"%s\"", &hostname[i*stream_max_hostname]);
+	}
+      else
+	{
+	  printf(", \"%s\"", &hostname[i*stream_max_hostname]);
+	}
+    }
+  printf("], \"bandwidth_mbs\": [");
+  for(i=0; i<size; i++)
+    {
+      if(i == 0)
+	{
+	  printf("\"%lf\"", bandwidth[i]);
+	}
+      else
+	{
+	  printf(", \"%lf\"", bandwidth[i]);
+	}
+    }
+  printf("]}\n");
+  printf(HLINE);
+};
 #ifdef TUNED
 extern void tuned_STREAM_Copy();
 extern void tuned_STREAM_Scale(double scalar);
@@ -94,37 +132,44 @@ int main(int argc, char *argv[])
   double **times;
   int opt = 0;
   double mem = -1.0;
+  int json = 0;
+  int rank = 0, size = 1;
+  double *all_bw = NULL;
 
 #ifdef HAVE_MPI
   double bw = 0.0;
-  double *all_bw;
   double bw_max = 0.0, bw_min = 0.0, bw_avg = 0.0, bw_stdd = 0.0, bw_sum = 0.0;
   int nthreads = 1;
   int j_max, j_min;
+  int stream_max_hostname = MPI_MAX_PROCESSOR_NAME;
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank, size, len;
-
+  int len;
+#else
+  int stream_max_hostname = HOST_NAME_MAX + 1;
+#endif
+#ifdef HAVE_MPI
   MPI_Init(&argc, &argv);
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
-
-  hostNames = (char *)malloc(size * MPI_MAX_PROCESSOR_NAME * sizeof(char));
-  myHostName = (char *)malloc(MPI_MAX_PROCESSOR_NAME * sizeof(char));
-
-  all_bw = (double *)malloc(size * sizeof(double));
-
+#endif
+  hostNames = (char *)malloc(size * stream_max_hostname * sizeof(char));
+  all_bw = (double *)malloc(size * sizeof(double));  
+#ifdef HAVE_MPI
+  myHostName = (char *)malloc(stream_max_hostname * sizeof(char));
   MPI_Get_processor_name(myHostName, &len);
-
-  MPI_Allgather(myHostName, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, hostNames,
-		MPI_MAX_PROCESSOR_NAME, MPI_CHAR, MPI_COMM_WORLD);
-
+  MPI_Allgather(myHostName, stream_max_hostname, MPI_CHAR, hostNames,
+		stream_max_hostname, MPI_CHAR, MPI_COMM_WORLD);
   free(myHostName);
+#else
+  gethostname(hostNames, stream_max_hostname);
+#endif
 
+#ifdef HAVE_MPI
   if (rank == 0)
   {
 #endif
-    while ((opt = getopt(argc, argv, "hn:m:t:o:")) != -1)
+    while ((opt = getopt(argc, argv, "hn:m:t:o:j")) != -1)
     {
       switch (opt)
       {
@@ -138,6 +183,7 @@ int main(int argc, char *argv[])
 	printf("   -m mem       Memory (kB) used per process\n");
 	printf("   -t ntimes    Number of times the computation will run\n");
 	printf("   -o offset    Offset\n");
+	printf("   -j           Print results in json format\n");
 	printf("   -h           Print this help\n\n");
 	exit(EXIT_SUCCESS);
 	break;
@@ -152,6 +198,9 @@ int main(int argc, char *argv[])
 	break;
       case 'o':
 	OFFSET = atoi(optarg);
+	break;
+      case 'j':
+	json = 1;
 	break;
       default:
 	break;
@@ -398,6 +447,8 @@ int main(int argc, char *argv[])
 
   if (rank == -1)
   {
+#else
+    all_bw[0] = 1.0E-06 * bytes[3] / mintime[3];
 #endif
     printf(HLINE);
 
@@ -418,7 +469,7 @@ int main(int argc, char *argv[])
 
     for (j = 0; j < size; j++)
     {
-      printf("%s\t\t%lf\n", &(hostNames[j * MPI_MAX_PROCESSOR_NAME]),
+      printf("%s\t\t%lf\n", &(hostNames[j * stream_max_hostname]),
 	     all_bw[j]);
       if (bw_max < all_bw[j])
       {
@@ -448,23 +499,26 @@ int main(int argc, char *argv[])
     }
     printf("\n\n============SUMMARY============\n\n");
     printf("TRIAD_MAX          = %lf\t\t MB/s on %s\n", bw_max,
-	   &(hostNames[j_max * MPI_MAX_PROCESSOR_NAME]));
+	   &(hostNames[j_max * stream_max_hostname]));
     printf("TRIAD_MIN          = %lf\t\t MB/s on %s\n", bw_min,
-	   &(hostNames[j_min * MPI_MAX_PROCESSOR_NAME]));
+	   &(hostNames[j_min * stream_max_hostname]));
     printf("TRIAD_AVG          = %lf\t\t MB/s\n", bw_avg);
     printf("TRIAD_AVG_per_proc = %lf\t\t MB/s\n", bw_avg / nthreads);
     printf("TRIAD_STDD         = %lf\t\t MB/s", bw_stdd);
     printf("\n\n==========END SUMMARY==========\n\n");
   }
 #endif
+  if(json == 1)
+    {
+      print_STREAM_json((3.0 * BytesPerWord) * ((double)N / 1024.0), size, hostNames, all_bw);
+    }
   free(a);
   free(b);
   free(c);
   free(times);
-#ifdef HAVE_MPI
   free(hostNames);
   free(all_bw);
-
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
   return 0;
