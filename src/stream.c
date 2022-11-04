@@ -76,43 +76,10 @@ static double bytes[4];
 
 extern double mysecond();
 extern void checkSTREAMresults();
-void print_STREAM_json(double mem, int size, char *hostname, double *bandwidth)
-{
-  int i = 0;
-#ifdef HAVE_MPI
-  int stream_max_hostname = MPI_MAX_PROCESSOR_NAME;
-#else
-  int stream_max_hostname = HOST_NAME_MAX + 1;
-#endif
-
-  printf(HLINE);
-  printf("Results in JSON: {\"mem_kb\": %lf, \"nhosts\": %d, \"hostnames\": [", mem, size);
-  for(i=0; i<size; i++)
-    {
-      if(i == 0)
-	{
-	  printf("\"%s\"", &hostname[i*stream_max_hostname]);
-	}
-      else
-	{
-	  printf(", \"%s\"", &hostname[i*stream_max_hostname]);
-	}
-    }
-  printf("], \"bandwidth_mbs\": [");
-  for(i=0; i<size; i++)
-    {
-      if(i == 0)
-	{
-	  printf("\"%lf\"", bandwidth[i]);
-	}
-      else
-	{
-	  printf(", \"%lf\"", bandwidth[i]);
-	}
-    }
-  printf("]}\n");
-  printf(HLINE);
-};
+extern void print_STREAM_json(double mem, int size, char *hostname,
+			      double *bandwidth);
+extern void print_STREAM_javascript(double mem, int size, char *hostname,
+				    double *bandwidth, char tag[]);
 #ifdef TUNED
 extern void tuned_STREAM_Copy();
 extern void tuned_STREAM_Scale(double scalar);
@@ -133,6 +100,8 @@ int main(int argc, char *argv[])
   int opt = 0;
   double mem = -1.0;
   int json = 0;
+  int javascript = 0;
+  char *javascript_tag = NULL;
   int rank = 0, size = 1;
   double *all_bw = NULL;
 
@@ -154,7 +123,7 @@ int main(int argc, char *argv[])
   MPI_Comm_rank(comm, &rank);
 #endif
   hostNames = (char *)malloc(size * stream_max_hostname * sizeof(char));
-  all_bw = (double *)malloc(size * sizeof(double));  
+  all_bw = (double *)malloc(size * sizeof(double));
 #ifdef HAVE_MPI
   myHostName = (char *)malloc(stream_max_hostname * sizeof(char));
   MPI_Get_processor_name(myHostName, &len);
@@ -169,7 +138,7 @@ int main(int argc, char *argv[])
   if (rank == 0)
   {
 #endif
-    while ((opt = getopt(argc, argv, "hn:m:t:o:j")) != -1)
+    while ((opt = getopt(argc, argv, "hn:m:t:o:jJT:")) != -1)
     {
       switch (opt)
       {
@@ -184,6 +153,9 @@ int main(int argc, char *argv[])
 	printf("   -t ntimes    Number of times the computation will run\n");
 	printf("   -o offset    Offset\n");
 	printf("   -j           Print results in json format\n");
+	printf(
+	    "   -J           Print results in javascript format for Plotly\n");
+	printf("   -T tag       Append tag to javascript variable name\n");
 	printf("   -h           Print this help\n\n");
 	exit(EXIT_SUCCESS);
 	break;
@@ -202,8 +174,21 @@ int main(int argc, char *argv[])
       case 'j':
 	json = 1;
 	break;
+      case 'J':
+	javascript = 1;
+	break;
+      case 'T':
+	javascript_tag = (char *)malloc((strlen(optarg) + 8) * sizeof(char));
+	strcpy(javascript_tag, "_");
+	strcat(javascript_tag, optarg);
+	break;
       default:
 	break;
+      }
+      if (javascript_tag == NULL)
+      {
+	javascript_tag = (char *)malloc(8 * sizeof(char));
+	strcpy(javascript_tag, "");
       }
       if (mem < 0)
       {
@@ -448,7 +433,7 @@ int main(int argc, char *argv[])
   if (rank == -1)
   {
 #else
-    all_bw[0] = 1.0E-06 * bytes[3] / mintime[3];
+  all_bw[0] = 1.0E-06 * bytes[3] / mintime[3];
 #endif
     printf(HLINE);
 
@@ -469,8 +454,7 @@ int main(int argc, char *argv[])
 
     for (j = 0; j < size; j++)
     {
-      printf("%s\t\t%lf\n", &(hostNames[j * stream_max_hostname]),
-	     all_bw[j]);
+      printf("%s\t\t%lf\n", &(hostNames[j * stream_max_hostname]), all_bw[j]);
       if (bw_max < all_bw[j])
       {
 	j_max = j;
@@ -508,16 +492,23 @@ int main(int argc, char *argv[])
     printf("\n\n==========END SUMMARY==========\n\n");
   }
 #endif
-  if(json == 1)
-    {
-      print_STREAM_json((3.0 * BytesPerWord) * ((double)N / 1024.0), size, hostNames, all_bw);
-    }
+  if (json == 1)
+  {
+    print_STREAM_json((3.0 * BytesPerWord) * ((double)N / 1024.0), size,
+		      hostNames, all_bw);
+  }
+  if (javascript == 1)
+  {
+    print_STREAM_javascript((3.0 * BytesPerWord) * ((double)N / 1024.0), size,
+			    hostNames, all_bw, javascript_tag);
+  }
   free(a);
   free(b);
   free(c);
   free(times);
   free(hostNames);
   free(all_bw);
+  free(javascript_tag);
 #ifdef HAVE_MPI
   MPI_Finalize();
 #endif
@@ -672,3 +663,86 @@ void tuned_STREAM_Triad(double scalar)
   for (j = 0; j < N; j++)
     a[j] = b[j] + scalar * c[j];
 }
+
+void print_STREAM_json(double mem, int size, char *hostname, double *bandwidth)
+{
+  int i = 0;
+#ifdef HAVE_MPI
+  int stream_max_hostname = MPI_MAX_PROCESSOR_NAME;
+#else
+  int stream_max_hostname = HOST_NAME_MAX + 1;
+#endif
+
+  printf(HLINE);
+  printf("Results in JSON: {\"mem_kb\": %lf, \"nhosts\": %d, \"hostnames\": [",
+	 mem, size);
+  for (i = 0; i < size; i++)
+  {
+    if (i == 0)
+    {
+      printf("\"%s\"", &hostname[i * stream_max_hostname]);
+    }
+    else
+    {
+      printf(", \"%s\"", &hostname[i * stream_max_hostname]);
+    }
+  }
+  printf("], \"bandwidth_mbs\": [");
+  for (i = 0; i < size; i++)
+  {
+    if (i == 0)
+    {
+      printf("\"%lf\"", bandwidth[i]);
+    }
+    else
+    {
+      printf(", \"%lf\"", bandwidth[i]);
+    }
+  }
+  printf("]}\n");
+  printf(HLINE);
+};
+
+void print_STREAM_javascript(double mem, int size, char *hostname,
+			     double *bandwidth, char tag[])
+{
+  int i = 0;
+#ifdef HAVE_MPI
+  int stream_max_hostname = MPI_MAX_PROCESSOR_NAME;
+#else
+  int stream_max_hostname = HOST_NAME_MAX + 1;
+#endif
+
+  printf(HLINE);
+  printf("<script>\n");
+  printf("  var stream_mem_kb%s = %lf;\n", tag, mem);
+  printf("  var stream_nhosts%s = %d;\n", tag, size);
+  printf("  var stream_hostnames%s = [", tag);
+  for (i = 0; i < size; i++)
+  {
+    if (i == 0)
+    {
+      printf("\"%s\"", &hostname[i * stream_max_hostname]);
+    }
+    else
+    {
+      printf(", \"%s\"", &hostname[i * stream_max_hostname]);
+    }
+  }
+  printf("];\n");
+  printf("  var bandwidth_mbs%s = [", tag);
+  for (i = 0; i < size; i++)
+  {
+    if (i == 0)
+    {
+      printf("\"%lf\"", bandwidth[i]);
+    }
+    else
+    {
+      printf(", \"%lf\"", bandwidth[i]);
+    }
+  }
+  printf("];\n");
+  printf("</script>\n");
+  printf(HLINE);
+};
