@@ -27,6 +27,43 @@ To share these new features with the HPC community, CEA publishes this modified 
 
 [Stream benchmark paper](https://www.researchgate.net/publication/213876927_Memory_Bandwidth_and_Machine_Balance_in_Current_High_Performance_Computers)
 
+## Prerequisites
+
+Main program:
+
+* C compiler
+* OpenMP
+* MPI
+
+## Compilation
+
+### Autoconf
+```
+$ ./autogen.sh
+$ ./configure                                   # Sequential mode
+$ ./configure --with-openmp                     # OpenMP mode
+$ ./configure --with-mpi CC=mpicc               # MPI mode
+$ ./configure --with-openmp --with-mpi CC=mpicc # MPI/OpenMP mode
+$ make
+```
+To pass options to C compiler:
+```
+$ ./configure CFLAGS="-mavx2" LDFLAGS="-mavx2"
+```
+### CMake
+```
+$ mkdir build
+$ cd build
+$ cmake ..                      # Sequential mode
+$ cmake -DOPENMP=ON ..          # OpenMP mode
+$ cmake -DMPI=ON ..             # MPI mode
+$ cmake -DOPENMP=ON -DMPI=ON .. # MPI/OpenMP mode
+$ make VERBOSE=1
+```
+To pass options to C compiler:
+```
+$ cmake -DCMAKE_C_FLAGS="-mavx2" -DCMAKE_EXE_LINKER_FLAGS="-mavx2" ..
+```
 ## Running
 
 ```
